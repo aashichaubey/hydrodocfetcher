@@ -1,22 +1,43 @@
-1. Extract matter and document type (Extract agent)
-    - Add a decode file to identify the matter number and document type from the user prompt
+Tech stack
+- Python 
+- Selenium for browser automation
+- Gmail API for email
+- Openai or Gemini API for llm
 
-2. Fetch files (Fetch agent)
+1. Input:
+    - email body from user
+2. Extract:
+    - matter number e.g. M12205
+    - document type e.g. Other Documents
+
+3. Validate:
+    - matter number format is M + digits
+    - document type is one of the expected categories
+    - if not, skip to error handling
+
+4. Fetch: 
+    - open UARB page
     - Input the matter number into Go directly to matter box, possibly web scrape using Selenium to identify where the box is
     - Count (web scrape again) # of exhibits, # key document, # Other Documents, # of Transcripts and recordings
+    - Collect matter metdadata (title - Description, Type, Category, Date Recieved, and Date Final Submissions)
+    - Parse tab labels e.g Exhibits - N
     - Navigate to other documents 
     - Open folder to redirect all downloaded documents
     - Press go get it + button with number.pdf to download each file increment count
     - Compress downloaded documents into Zip
-    - Also get the metadata: title - Description and Type and Category and Date Recieved and Date Final Submissions
 
-3. Email agent
+5. Email agent
     - Upload zip as attachment
-    - Generate prompt that must include the following info
+    - Generate prompt that must include the following info (use LLM to write in natural language)
         - Matter number
         - Metadata
         - Count of documents
         - Mention that up to 10 were downloaded and attached as Zip
+
+6. Error handling
+    - If matter number does not exist in the UARB page send error response asking for missing field
+    - If the document type does not exactly match a supported category, the agent first applies simple 
+    normalization and fuzzy matching for common variations or typos, such as “other docs” or “Other Docmets” → “Other Documents.” 
 
 
 
