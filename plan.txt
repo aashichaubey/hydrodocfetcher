@@ -1,0 +1,23 @@
+1. Extract matter and document type (Extract agent)
+    - Add a decode file to identify the matter number and document type from the user prompt
+
+2. Fetch files (Fetch agent)
+    - Input the matter number into Go directly to matter box, possibly web scrape using Selenium to identify where the box is
+    - Count (web scrape again) # of exhibits, # key document, # Other Documents, # of Transcripts and recordings
+    - Navigate to other documents 
+    - Open folder to redirect all downloaded documents
+    - Press go get it + button with number.pdf to download each file increment count
+    - Compress downloaded documents into Zip
+    - Also get the metadata: title - Description and Type and Category and Date Recieved and Date Final Submissions
+
+3. Email agent
+    - Upload zip as attachment
+    - Generate prompt that must include the following info
+        - Matter number
+        - Metadata
+        - Count of documents
+        - Mention that up to 10 were downloaded and attached as Zip
+
+
+
+
