@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from playwright.sync_api import sync_playwright
 
 from doc_downloader import (
+    create_zip,
     download_documents,
     open_document_tab,
 )
@@ -114,11 +115,25 @@ def open_matter(
                 limit=download_limit,
             )
 
+            zip_name = (
+                f"{matter_number}_"
+                f"{document_type.replace(' ', '_')}.zip"
+            )
+
+            zip_path = create_zip(
+                files,
+                temp_folder,
+                zip_name,
+            )
+
             print("Downloaded files:", files)
+            print("ZIP file:", zip_path)
+            print("Temporary folder:", temp_folder)
             print(
-                "These temporary files will be deleted "
+                "The ZIP and PDFs will be deleted "
                 "after you press Enter."
             )
+
             input("Press Enter to finish...")
 
         browser.close()
