@@ -1,5 +1,6 @@
 import re
 from tempfile import TemporaryDirectory
+from email_reply import send_email_response
 
 from playwright.sync_api import sync_playwright
 
@@ -124,6 +125,15 @@ def open_matter(
                 files,
                 temp_folder,
                 zip_name,
+            )
+
+            send_email_response(
+                recipient="aashic63@gmail.com",
+                matter_number=matter_number,
+                document_type=document_type,
+                metadata=metadata,
+                downloaded_files=files,
+                zip_path=zip_path,
             )
 
             print("Downloaded files:", files)
