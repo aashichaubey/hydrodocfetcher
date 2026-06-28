@@ -101,10 +101,11 @@ def create_email_body(
         f"Regards,\n"
         f"UARB Document Agent"
     )
-
-
+    
 def send_email_response(
     recipient,
+    original_subject,
+    original_message_id,
     matter_number,
     document_type,
     metadata,
@@ -125,6 +126,11 @@ def send_email_response(
         zip_path.read_bytes()
     ).decode("utf-8")
 
+    if original_subject.lower().startswith("re:"):
+        reply_subject = original_subject
+    else:
+        reply_subject = f"Re: {original_subject}"
+
     response = httpx.post(
         "https://api.resend.com/emails",
         headers={
@@ -137,9 +143,11 @@ def send_email_response(
             "reply_to": (
                 "documents@agent.aashichaubey.com"
             ),
-            "subject": (
-                f"Documents for {matter_number}"
-            ),
+            "subject": reply_subject,
+            "headers": {
+                "In-Reply-To": original_message_id,
+                "References": original_message_id,
+            },
             "text": email_body,
             "attachments": [
                 {
