@@ -8,7 +8,10 @@ from doc_downloader import (
     download_documents,
     open_document_tab,
 )
-from email_reply import send_email_response
+from email_reply import (
+    send_email_response,
+    send_no_documents_response,
+)
 
 
 UARB_URL = "https://uarb.novascotia.ca/fmi/webd/UARB15"
@@ -161,20 +164,38 @@ def process_document_request(
                             zip_name,
                         )
 
-                email_result = send_email_response(
-                    recipient=recipient,
-                    original_subject=original_subject,
-                    original_message_id=(
-                        original_message_id
-                    ),
-                    matter_number=matter_number,
-                    document_type=document_type,
-                    metadata=metadata,
-                    downloaded_files=(
-                        downloaded_files
-                    ),
-                    zip_path=zip_path,
-                )
+                if available_count == 0:
+                    email_result = (
+                        send_no_documents_response(
+                            recipient=recipient,
+                            original_subject=(
+                                original_subject
+                            ),
+                            original_message_id=(
+                                original_message_id
+                            ),
+                            matter_number=matter_number,
+                            document_type=document_type,
+                            metadata=metadata,
+                        )
+                    )
+                else:
+                    email_result = send_email_response(
+                        recipient=recipient,
+                        original_subject=(
+                            original_subject
+                        ),
+                        original_message_id=(
+                            original_message_id
+                        ),
+                        matter_number=matter_number,
+                        document_type=document_type,
+                        metadata=metadata,
+                        downloaded_files=(
+                            downloaded_files
+                        ),
+                        zip_path=zip_path,
+                    )
 
                 result = {
                     "matter_number": matter_number,

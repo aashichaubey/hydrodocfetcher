@@ -113,16 +113,6 @@ def create_email_body(
     )
 
 
-def build_reply_subject(original_subject):
-    if not original_subject:
-        return "Re: Document request"
-
-    if original_subject.lower().startswith("re:"):
-        return original_subject
-
-    return f"Re: {original_subject}"
-
-
 def send_invalid_request_response(
     recipient,
     original_subject,
@@ -140,6 +130,11 @@ def send_invalid_request_response(
         "UARB Document Agent"
     )
 
+    if original_subject.lower().startswith("re:"):
+        reply_subject = original_subject
+    else:
+        reply_subject = f"Re: {original_subject}"
+
     response = httpx.post(
         "https://api.resend.com/emails",
         headers={
@@ -152,11 +147,10 @@ def send_invalid_request_response(
             "reply_to": (
                 "documents@agent.aashichaubey.com"
             ),
-            "subject": build_reply_subject(
-                original_subject
-            ),
+            "subject": reply_subject,
             "headers": {
                 "In-Reply-To": original_message_id,
+                "References": original_message_id,
             },
             "text": email_body,
         },
@@ -166,6 +160,56 @@ def send_invalid_request_response(
     response.raise_for_status()
     result = response.json()
     print("Invalid-request email sent:", result)
+    return result
+
+
+def send_no_documents_response(
+    recipient,
+    original_subject,
+    original_message_id,
+    matter_number,
+    document_type,
+    metadata,
+):
+    api_key = os.environ["RESEND_API_KEY"]
+
+    email_body = create_email_body(
+        matter_number=matter_number,
+        document_type=document_type,
+        metadata=metadata,
+        downloaded_count=0,
+    )
+
+    if original_subject.lower().startswith("re:"):
+        reply_subject = original_subject
+    else:
+        reply_subject = f"Re: {original_subject}"
+
+    response = httpx.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": FROM_EMAIL,
+            "to": [recipient],
+            "reply_to": (
+                "documents@agent.aashichaubey.com"
+            ),
+            "subject": reply_subject,
+            "headers": {
+                "In-Reply-To": original_message_id,
+                "References": original_message_id,
+            },
+            "text": email_body,
+        },
+        timeout=60,
+    )
+
+    response.raise_for_status()
+    result = response.json()
+    print("No-documents email sent:", result)
     return result
 
 
@@ -180,6 +224,8 @@ def send_email_response(
     zip_path,
 ):
     api_key = os.environ["RESEND_API_KEY"]
+    zip_path = Path(zip_path)
+
     email_body = create_email_body(
         matter_number=matter_number,
         document_type=document_type,
@@ -187,32 +233,14 @@ def send_email_response(
         downloaded_count=len(downloaded_files),
     )
 
-    email_payload = {
-        "from": FROM_EMAIL,
-        "to": [recipient],
-        "reply_to": (
-            "documents@agent.aashichaubey.com"
-        ),
-        "subject": build_reply_subject(
-            original_subject
-        ),
-        "headers": {
-            "In-Reply-To": original_message_id,
-        },
-        "text": email_body,
-    }
+    zip_content = base64.b64encode(
+        zip_path.read_bytes()
+    ).decode("utf-8")
 
-    if zip_path is not None:
-        zip_path = Path(zip_path)
-        zip_content = base64.b64encode(
-            zip_path.read_bytes()
-        ).decode("utf-8")
-        email_payload["attachments"] = [
-            {
-                "filename": zip_path.name,
-                "content": zip_content,
-            }
-        ]
+    if original_subject.lower().startswith("re:"):
+        reply_subject = original_subject
+    else:
+        reply_subject = f"Re: {original_subject}"
 
     response = httpx.post(
         "https://api.resend.com/emails",
@@ -220,7 +248,25 @@ def send_email_response(
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
-        json=email_payload,
+        json={
+            "from": FROM_EMAIL,
+            "to": [recipient],
+            "reply_to": (
+                "documents@agent.aashichaubey.com"
+            ),
+            "subject": reply_subject,
+            "headers": {
+                "In-Reply-To": original_message_id,
+                "References": original_message_id,
+            },
+            "text": email_body,
+            "attachments": [
+                {
+                    "filename": zip_path.name,
+                    "content": zip_content,
+                }
+            ],
+        },
         timeout=60,
     )
 
