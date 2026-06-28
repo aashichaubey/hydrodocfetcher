@@ -1,7 +1,11 @@
 import re
 
 from playwright.sync_api import sync_playwright
-
+from doc_downloader import open_document_tab
+from doc_downloader import (
+    open_document_tab,
+    download_first_document,
+)
 
 UARB_URL = "https://uarb.novascotia.ca/fmi/webd/UARB15"
 
@@ -81,6 +85,10 @@ def open_matter(matter_number):
         search_button.click()
         metadata = extract_metadata(page)
         print(metadata)
+        page.wait_for_timeout(500)
+        open_document_tab(page, "Other Documents")
+        page.wait_for_timeout(500)
+        download_first_document(page)
 
         page.wait_for_timeout(8000)
         input("Press Enter to close the browser...")
