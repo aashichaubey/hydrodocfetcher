@@ -22,7 +22,7 @@ def extract_metadata(page):
         ".fm_object_292 .text"
     ).wait_for(
         state="visible",
-        timeout=10000,
+        timeout=30000,
     )
 
     metadata = {
@@ -104,13 +104,13 @@ def process_document_request(
 
             matter_input.wait_for(
                 state="visible",
-                timeout=10000,
+                timeout=30000,
             )
 
             # FileMaker requires the field to be focused
             # before it accepts keyboard input.
             matter_input.click()
-            page.wait_for_timeout(300)
+            page.wait_for_timeout(500)
 
             matter_input.type(
                 matter_number,
