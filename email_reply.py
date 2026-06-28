@@ -157,7 +157,6 @@ def send_invalid_request_response(
             ),
             "headers": {
                 "In-Reply-To": original_message_id,
-                "References": original_message_id,
             },
             "text": email_body,
         },
@@ -199,7 +198,6 @@ def send_email_response(
         ),
         "headers": {
             "In-Reply-To": original_message_id,
-            "References": original_message_id,
         },
         "text": email_body,
     }

@@ -1,44 +1,77 @@
 Tech stack
-- Python 
-- Selenium for browser automation
-- Gmail API for email
-- Openai or Gemini API for llm
+
+* Python
+* FastAPI for the webhook/app
+* Resend for receiving and sending emails
+* Playwright for browser automation
+* Railway for deployment
+* No LLM used in the main workflow because most of the task was deterministic automation
 
 1. Input:
-    - email body from user
+
+   * user emails the agent
+   * Resend receives the email and sends a webhook to my FastAPI app
+   * the app gets the email subject/body from Resend
+
 2. Extract:
-    - matter number e.g. M12205
-    - document type e.g. Other Documents
+
+   * matter number e.g. M12205
+   * document type e.g. Other Documents
 
 3. Validate:
-    - matter number format is M + digits
-    - document type is one of the expected categories
-    - if not, skip to error handling
 
-4. Fetch: 
-    - open UARB page
-    - Input the matter number into Go directly to matter box, possibly web scrape using Selenium to identify where the box is
-    - Count (web scrape again) # of exhibits, # key document, # Other Documents, # of Transcripts and recordings
-    - Collect matter metdadata (title - Description, Type, Category, Date Recieved, and Date Final Submissions)
-    - Parse tab labels e.g Exhibits - N
-    - Navigate to other documents 
-    - Open folder to redirect all downloaded documents
-    - Press go get it + button with number.pdf to download each file increment count
-    - Compress downloaded documents into Zip
+   * matter number format is M + digits
+   * document type is one of the expected categories
+   * if not, it should go to error handling / clarification
 
-5. Email agent
-    - Upload zip as attachment
-    - Generate prompt that must include the following info (use LLM to write in natural language)
-        - Matter number
-        - Metadata
-        - Count of documents
-        - Mention that up to 10 were downloaded and attached as Zip
+4. Fetch:
 
-6. Error handling
-    - If matter number does not exist in the UARB page send error response asking for missing field
-    - If the document type does not exactly match a supported category, the agent first applies simple 
-    normalization and fuzzy matching for common variations or typos, such as “other docs” or “Other Docmets” → “Other Documents.” 
+   * open UARB page using Playwright
+   * input the matter number into the Go Directly to Matter box
+   * press Search
+   * collect matter metadata:
 
+     * title / description
+     * type
+     * category
+     * date received
+     * decision/final date
+   * count number of documents from the tab labels:
 
+     * Exhibits
+     * Key Documents
+     * Other Documents
+     * Transcripts
+     * Recordings
+   * navigate to the requested document tab
+   * press the Go GET IT button for each document
+   * download up to 10 files
+   * added scrolling because only some document rows show in the viewport at once
+   * save files in a temporary folder while the request is being processed
+   * compress downloaded documents into a ZIP
 
+5. Email agent:
 
+   * generate an email response using the metadata and counts from the page
+   * attach the ZIP file
+   * response includes:
+
+     * matter number
+     * metadata summary
+     * count of all document categories
+     * how many requested files were downloaded
+     * mention that the downloaded files are attached as a ZIP
+
+6. Deployment:
+
+   * deployed the FastAPI app on Railway
+   * used Resend webhook so the agent can receive emails without my laptop running
+   * used Resend API to send the response email with the ZIP attachment
+   * configured my domain/DNS so the agent email address can receive and send messages
+
+7. Error handling / future improvements:
+
+   * if matter number does not exist, send a clearer error response
+   * if document type is invalid, send a clarification email listing valid options
+   * add simple normalization/fuzzy matching for typos, such as “other docs” or “Other Docmets” → “Other Documents”
+   * possibly use an LLM only for unclear natural language parsing, not for the core automation
