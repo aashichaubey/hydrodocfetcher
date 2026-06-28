@@ -1,4 +1,6 @@
 from pathlib import Path
+
+
 def open_document_tab(page, document_type):
     tab = page.locator(
         ".iwps_button_bar_segment button"
@@ -21,8 +23,7 @@ def open_document_tab(page, document_type):
     )
 
 
-
-def download_documents(page, download_folder, limit=5):
+def download_documents(page, download_folder, limit=10):
     folder = Path(download_folder)
     folder.mkdir(parents=True, exist_ok=True)
 
@@ -40,7 +41,7 @@ def download_documents(page, download_folder, limit=5):
     )
 
     for index in range(number_to_download):
-        # Re-locate because FileMaker changes the page after each modal.
+        # Re-find the buttons because FileMaker updates the page.
         go_get_buttons = page.get_by_role(
             "button",
             name="GO GET IT",
@@ -61,20 +62,22 @@ def download_documents(page, download_folder, limit=5):
         with page.expect_download() as download_info:
             download_button.click()
 
-        download_info.value.save_as(file_path)
-        downloaded_files.append(file_path)
+        download = download_info.value
+        download.save_as(file_path)
 
-        page.get_by_role(
+        downloaded_files.append(file_path)
+        print(f"Downloaded: {file_path.resolve()}")
+
+        close_button = page.get_by_role(
             "button",
             name="Close",
             exact=True,
-        ).click()
+        )
+        close_button.click()
 
         download_button.wait_for(
             state="hidden",
             timeout=30000,
         )
-
-        print(f"Downloaded: {file_path}")
 
     return downloaded_files
