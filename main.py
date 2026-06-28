@@ -43,5 +43,5 @@ async def receive_email(request: Request):
 
     return {"received": True}
 
-    info_dic = parse_request(body)
-    print(info_dic)
+    info_dict = parse_request(body)
+    print("Parsed request:", info_dict)
