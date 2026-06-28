@@ -3,6 +3,8 @@ import os
 import httpx
 from fastapi import FastAPI, Request
 
+from request_parser import parse_request
+
 app = FastAPI()
 
 
@@ -32,9 +34,14 @@ async def receive_email(request: Request):
     subject = email.get("subject", "")
     body = email.get("text") or email.get("html") or ""
     sender = email.get("from", "")
+    parsed_request = parse_request(f"{subject}\n{body}")
+    print("Parsed request:", parsed_request)
 
     print("Sender:", sender)
     print("Subject:", subject)
     print("Body:", body)
 
     return {"received": True}
+
+    info_dic = parse_request(body)
+    print(info_dic)
