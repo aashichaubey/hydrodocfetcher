@@ -9,6 +9,7 @@ from doc_downloader import (
     open_document_tab,
 )
 from email_reply import (
+    send_download_failure_response,
     send_email_response,
     send_no_documents_response,
 )
@@ -179,6 +180,21 @@ def process_document_request(
                             metadata=metadata,
                         )
                     )
+                elif not downloaded_files:
+                    email_result = (
+                        send_download_failure_response(
+                            recipient=recipient,
+                            original_subject=(
+                                original_subject
+                            ),
+                            original_message_id=(
+                                original_message_id
+                            ),
+                            matter_number=matter_number,
+                            document_type=document_type,
+                            metadata=metadata,
+                        )
+                    )
                 else:
                     email_result = send_email_response(
                         recipient=recipient,
@@ -217,3 +233,14 @@ def process_document_request(
 
         finally:
             browser.close()
+
+if __name__ == "__main__":
+    process_document_request(
+        recipient="aashic63@gmail.com",
+        original_subject="Document request",
+        original_message_id="<local-demo@example.com>",
+        matter_number="M12205",
+        document_type="Other Documents",
+        download_limit=10,
+        headless=False,
+    )

@@ -1,6 +1,10 @@
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from playwright.sync_api import (
+    TimeoutError as PlaywrightTimeoutError,
+)
+
 
 def open_document_tab(page, document_type):
     tab = page.locator(
@@ -86,16 +90,43 @@ def download_documents(
                 ".fm_object_299 button"
             )
 
-            go_get_button.click()
-
             download_button = page.locator(
                 ".fm-download-button"
             )
 
-            download_button.wait_for(
-                state="visible",
-                timeout=10000,
-            )
+            modal_opened = False
+
+            for attempt in range(2):
+                try:
+                    go_get_button.click(
+                        timeout=10000,
+                    )
+                    download_button.wait_for(
+                        state="visible",
+                        timeout=10000,
+                    )
+                    modal_opened = True
+                    break
+
+                except PlaywrightTimeoutError:
+                    print(
+                        f"Could not open download dialog "
+                        f"for {document_number} "
+                        f"(attempt {attempt + 1})."
+                    )
+
+                    if attempt == 0:
+                        page.wait_for_timeout(1500)
+
+            if not modal_opened:
+                print(
+                    f"Skipping row whose download dialog "
+                    f"did not open: {document_number}"
+                )
+                processed_document_numbers.add(
+                    document_number
+                )
+                continue
 
             # The modal appears before FileMaker finishes
             # preparing the file.
@@ -115,12 +146,48 @@ def download_documents(
                 / Path(filename).name
             )
 
-            with page.expect_download(
-                timeout=30000,
-            ) as download_info:
-                download_button.click()
+            download = None
 
-            download = download_info.value
+            for attempt in range(2):
+                try:
+                    with page.expect_download(
+                        timeout=30000,
+                    ) as download_info:
+                        download_button.click()
+
+                    download = download_info.value
+                    break
+
+                except PlaywrightTimeoutError:
+                    print(
+                        f"Download attempt {attempt + 1} "
+                        f"failed for {document_number}."
+                    )
+
+                    if attempt == 0:
+                        page.wait_for_timeout(2000)
+
+            if download is None:
+                print(
+                    f"Skipping unavailable document: "
+                    f"{document_number}"
+                )
+                processed_document_numbers.add(
+                    document_number
+                )
+
+                close_button = page.get_by_role(
+                    "button",
+                    name="Close",
+                    exact=True,
+                )
+                close_button.click()
+                download_button.wait_for(
+                    state="hidden",
+                    timeout=10000,
+                )
+                continue
+
             download.save_as(file_path)
 
             downloaded_files.append(file_path)

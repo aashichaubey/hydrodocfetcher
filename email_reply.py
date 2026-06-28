@@ -213,6 +213,61 @@ def send_no_documents_response(
     return result
 
 
+def send_download_failure_response(
+    recipient,
+    original_subject,
+    original_message_id,
+    matter_number,
+    document_type,
+    metadata,
+):
+    api_key = os.environ["RESEND_API_KEY"]
+    counts = metadata["document_counts"]
+    available_count = counts.get(document_type, 0)
+
+    email_body = (
+        f"Hi,\n\n"
+        f"I found {available_count} {document_type} for "
+        f"{matter_number}, but the UARB website did not "
+        f"provide a downloadable file after two attempts. "
+        f"Please try this request again later.\n\n"
+        f"Regards,\n"
+        f"UARB Document Agent"
+    )
+
+    if original_subject.lower().startswith("re:"):
+        reply_subject = original_subject
+    else:
+        reply_subject = f"Re: {original_subject}"
+
+    response = httpx.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": FROM_EMAIL,
+            "to": [recipient],
+            "reply_to": (
+                "documents@agent.aashichaubey.com"
+            ),
+            "subject": reply_subject,
+            "headers": {
+                "In-Reply-To": original_message_id,
+                "References": original_message_id,
+            },
+            "text": email_body,
+        },
+        timeout=60,
+    )
+
+    response.raise_for_status()
+    result = response.json()
+    print("Download-failure email sent:", result)
+    return result
+
+
 def send_email_response(
     recipient,
     original_subject,
