@@ -129,6 +129,7 @@ def process_document_request(
                 prefix="uarb_"
             ) as temp_folder:
                 downloaded_files = []
+                zip_path = None
 
                 if available_count > 0:
                     open_document_tab(
@@ -147,17 +148,18 @@ def process_document_request(
                         )
                     )
 
-                zip_name = (
-                    f"{matter_number}_"
-                    f"{document_type.replace(' ', '_')}"
-                    f".zip"
-                )
+                    if downloaded_files:
+                        zip_name = (
+                            f"{matter_number}_"
+                            f"{document_type.replace(' ', '_')}"
+                            f".zip"
+                        )
 
-                zip_path = create_zip(
-                    downloaded_files,
-                    temp_folder,
-                    zip_name,
-                )
+                        zip_path = create_zip(
+                            downloaded_files,
+                            temp_folder,
+                            zip_name,
+                        )
 
                 email_result = send_email_response(
                     recipient=recipient,

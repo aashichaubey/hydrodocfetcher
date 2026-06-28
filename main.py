@@ -11,6 +11,7 @@ from fastapi import (
 
 from request_parser import parse_request
 from uarb_scraper import process_document_request
+from email_reply import send_invalid_request_response
 
 
 app = FastAPI()
@@ -78,15 +79,18 @@ async def process_received_email(event):
                 "Incoming email has no sender address."
             )
 
-        if not matter_number:
-            raise ValueError(
-                "No valid matter number was found."
+        if not matter_number or not document_type:
+            result = await asyncio.to_thread(
+                send_invalid_request_response,
+                recipient=sender,
+                original_subject=subject,
+                original_message_id=message_id,
             )
-
-        if not document_type:
-            raise ValueError(
-                "No valid document type was found."
+            print(
+                "Invalid request handled:",
+                result,
             )
+            return
 
         # The scraper is synchronous and takes time, so run it
         # in a worker thread instead of blocking FastAPI.

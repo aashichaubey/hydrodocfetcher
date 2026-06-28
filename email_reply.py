@@ -85,6 +85,18 @@ def create_email_body(
         metadata["decision_date"]
     )
 
+    if requested_count == 0:
+        download_summary = (
+            f"I found no {document_type} for this matter, "
+            f"so there is no ZIP attachment."
+        )
+    else:
+        download_summary = (
+            f"I downloaded {downloaded_count} out of the "
+            f"{requested_count} {document_type} and attached "
+            f"them as a ZIP here."
+        )
+
     return (
         f"Hi,\n"
         f"{matter_number} is about the {metadata['title']}. "
@@ -95,41 +107,38 @@ def create_email_body(
         f"{decision_date}.\n"
         f"There are {total_count} files in total. "
         f"I found {count_summary}.\n\n"
-        f"I downloaded {downloaded_count} out of the "
-        f"{requested_count} {document_type} and attached "
-        f"them as a ZIP here.\n\n"
+        f"{download_summary}\n\n"
         f"Regards,\n"
         f"UARB Document Agent"
     )
-    
-def send_email_response(
+
+
+def build_reply_subject(original_subject):
+    if not original_subject:
+        return "Re: Document request"
+
+    if original_subject.lower().startswith("re:"):
+        return original_subject
+
+    return f"Re: {original_subject}"
+
+
+def send_invalid_request_response(
     recipient,
     original_subject,
     original_message_id,
-    matter_number,
-    document_type,
-    metadata,
-    downloaded_files,
-    zip_path,
 ):
     api_key = os.environ["RESEND_API_KEY"]
-    zip_path = Path(zip_path)
 
-    email_body = create_email_body(
-        matter_number=matter_number,
-        document_type=document_type,
-        metadata=metadata,
-        downloaded_count=len(downloaded_files),
+    email_body = (
+        "Hi,\n\n"
+        "Invalid request. Please provide a matter number "
+        "(for example, M12205) and one document type: "
+        "Exhibits, Key Documents, Other Documents, "
+        "Transcripts, or Recordings.\n\n"
+        "Regards,\n"
+        "UARB Document Agent"
     )
-
-    zip_content = base64.b64encode(
-        zip_path.read_bytes()
-    ).decode("utf-8")
-
-    if original_subject.lower().startswith("re:"):
-        reply_subject = original_subject
-    else:
-        reply_subject = f"Re: {original_subject}"
 
     response = httpx.post(
         "https://api.resend.com/emails",
@@ -143,19 +152,77 @@ def send_email_response(
             "reply_to": (
                 "documents@agent.aashichaubey.com"
             ),
-            "subject": reply_subject,
+            "subject": build_reply_subject(
+                original_subject
+            ),
             "headers": {
                 "In-Reply-To": original_message_id,
                 "References": original_message_id,
             },
             "text": email_body,
-            "attachments": [
-                {
-                    "filename": zip_path.name,
-                    "content": zip_content,
-                }
-            ],
         },
+        timeout=60,
+    )
+
+    response.raise_for_status()
+    result = response.json()
+    print("Invalid-request email sent:", result)
+    return result
+
+
+def send_email_response(
+    recipient,
+    original_subject,
+    original_message_id,
+    matter_number,
+    document_type,
+    metadata,
+    downloaded_files,
+    zip_path,
+):
+    api_key = os.environ["RESEND_API_KEY"]
+    email_body = create_email_body(
+        matter_number=matter_number,
+        document_type=document_type,
+        metadata=metadata,
+        downloaded_count=len(downloaded_files),
+    )
+
+    email_payload = {
+        "from": FROM_EMAIL,
+        "to": [recipient],
+        "reply_to": (
+            "documents@agent.aashichaubey.com"
+        ),
+        "subject": build_reply_subject(
+            original_subject
+        ),
+        "headers": {
+            "In-Reply-To": original_message_id,
+            "References": original_message_id,
+        },
+        "text": email_body,
+    }
+
+    if zip_path is not None:
+        zip_path = Path(zip_path)
+        zip_content = base64.b64encode(
+            zip_path.read_bytes()
+        ).decode("utf-8")
+        email_payload["attachments"] = [
+            {
+                "filename": zip_path.name,
+                "content": zip_content,
+            }
+        ]
+
+    response = httpx.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json=email_payload,
         timeout=60,
     )
 
